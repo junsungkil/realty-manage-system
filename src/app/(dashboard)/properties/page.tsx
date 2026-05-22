@@ -61,7 +61,7 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
     query = query.eq('status', searchParams.status)
   }
   if (searchParams.q) {
-    query = query.ilike('address', `%${searchParams.q}%`)
+    query = query.or(`address.ilike.%${searchParams.q}%,title.ilike.%${searchParams.q}%`)
   }
 
   const { data: properties } = await query
