@@ -164,8 +164,8 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
         address: form.address,
         detail_address: form.detail_address || null,
         exclusive_area: form.exclusive_area ? parseFloat(form.exclusive_area) : null,
-        room_count: form.room_count,
-        bathroom_count: form.bathroom_count,
+        room_count: Number(form.room_count) || 1,
+        bathroom_count: Number(form.bathroom_count) || 1,
         floor: form.floor ? parseInt(form.floor) : null,
         total_floors: form.total_floors ? parseInt(form.total_floors) : null,
         status: form.status,
@@ -432,7 +432,7 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
               type="number"
               min="1"
               value={form.room_count}
-              onChange={(e) => update('room_count', parseInt(e.target.value) || 1)}
+              onChange={(e) => update('room_count', e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
               suffix="개"
             />
             <Input
@@ -441,7 +441,7 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
               type="number"
               min="1"
               value={form.bathroom_count}
-              onChange={(e) => update('bathroom_count', parseInt(e.target.value) || 1)}
+              onChange={(e) => update('bathroom_count', e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
               suffix="개"
             />
           </div>
