@@ -363,7 +363,7 @@ export default function CreatePropertyPage() {
           />
           <Input
             id="detail_address"
-            label="동/호수 (내부용)"
+            label="동/호수"
             placeholder="101동 502호"
             value={form.detail_address}
             onChange={(e) => updateForm('detail_address', e.target.value)}

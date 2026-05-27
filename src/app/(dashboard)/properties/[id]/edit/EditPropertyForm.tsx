@@ -442,7 +442,7 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
         <section className="flex flex-col gap-4">
           <p className="text-sm font-semibold text-slate-800 -mb-1">위치 및 구조</p>
           <Input id="address" label="주소 *" value={form.address} onChange={(e) => update('address', e.target.value)} required />
-          <Input id="detail_address" label="동/호수 (내부용)" value={form.detail_address} onChange={(e) => update('detail_address', e.target.value)} />
+          <Input id="detail_address" label="동/호수" value={form.detail_address} onChange={(e) => update('detail_address', e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
             <Input id="exclusive_area" label="전용면적 (㎡)" type="number" value={form.exclusive_area} onChange={(e) => update('exclusive_area', e.target.value)} suffix="㎡" />
             <div className="flex gap-2">
