@@ -1,21 +1,40 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Toast, useToast } from '@/components/ui/Toast'
 import { Building2, Mail, Lock, ArrowRight } from 'lucide-react'
 
+const SAVED_EMAIL_KEY = 'saved_email'
+
 export default function LoginPage() {
   const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [saveId, setSaveId] = useState(false)
   const [loading, setLoading] = useState(false)
   const { toast, showToast, closeToast } = useToast()
+
+  // 저장된 이메일 불러오기
+  useEffect(() => {
+    const saved = localStorage.getItem(SAVED_EMAIL_KEY)
+    if (saved) {
+      setEmail(saved)
+      setSaveId(true)
+    }
+  }, [])
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
+
+    // ID 저장 처리
+    if (saveId) {
+      localStorage.setItem(SAVED_EMAIL_KEY, email)
+    } else {
+      localStorage.removeItem(SAVED_EMAIL_KEY)
+    }
 
     const { error } = await supabase.auth.signInWithPassword({ email, password })
 
@@ -102,6 +121,25 @@ export default function LoginPage() {
               />
             </div>
           </div>
+
+          {/* ID 저장 체크박스 */}
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div
+              onClick={() => setSaveId((v) => !v)}
+              className={`w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                saveId
+                  ? 'bg-blue-500 border-blue-500'
+                  : 'border-white/30 bg-white/5'
+              }`}
+            >
+              {saveId && (
+                <svg width="11" height="9" viewBox="0 0 11 9" fill="none">
+                  <path d="M1 4L4 7.5L10 1" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <span className="text-xs text-blue-200">이메일 저장</span>
+          </label>
 
           {/* 로그인 버튼 */}
           <button
