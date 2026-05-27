@@ -110,7 +110,7 @@ function AdvancedFilterPanelInner() {
 
       {/* 바텀시트 */}
       <div
-        className={`fixed bottom-16 left-0 right-0 z-[60] bg-white rounded-t-2xl shadow-xl transition-transform duration-300 flex flex-col max-h-[80vh] ${
+        className={`fixed bottom-16 left-0 right-0 w-full z-[60] bg-white rounded-t-2xl shadow-xl transition-transform duration-300 flex flex-col max-h-[80vh] overflow-x-hidden ${
           open ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
@@ -122,17 +122,17 @@ function AdvancedFilterPanelInner() {
           </button>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-4 py-4 flex flex-col gap-5">
+        <div className="overflow-y-auto flex-1 px-4 py-4 flex flex-col gap-5 overflow-x-hidden">
           {/* 전용면적 */}
           <div>
             <p className="text-sm font-semibold text-slate-700 mb-2">전용면적 (㎡)</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <input
                 type="number"
                 placeholder="최소"
                 value={filter.area_min}
                 onChange={(e) => update('area_min', e.target.value)}
-                className="flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="min-w-0 flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <span className="text-slate-400 text-sm shrink-0">~</span>
               <input
@@ -140,22 +140,21 @@ function AdvancedFilterPanelInner() {
                 placeholder="최대"
                 value={filter.area_max}
                 onChange={(e) => update('area_max', e.target.value)}
-                className="flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="min-w-0 flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <span className="text-xs text-slate-500 shrink-0">㎡</span>
             </div>
           </div>
 
           {/* 보증금/금액 */}
           <div>
             <p className="text-sm font-semibold text-slate-700 mb-2">보증금/금액 (만원)</p>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 min-w-0">
               <input
                 type="number"
                 placeholder="최소"
                 value={filter.deposit_min}
                 onChange={(e) => update('deposit_min', e.target.value)}
-                className="flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="min-w-0 flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <span className="text-slate-400 text-sm shrink-0">~</span>
               <input
@@ -163,22 +162,21 @@ function AdvancedFilterPanelInner() {
                 placeholder="최대"
                 value={filter.deposit_max}
                 onChange={(e) => update('deposit_max', e.target.value)}
-                className="flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="min-w-0 flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <span className="text-xs text-slate-500 shrink-0">만원</span>
             </div>
           </div>
 
           {/* 층수 */}
           <div>
-            <p className="text-sm font-semibold text-slate-700 mb-2">층수</p>
-            <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold text-slate-700 mb-2">층수 (층)</p>
+            <div className="flex items-center gap-2 min-w-0">
               <input
                 type="number"
                 placeholder="최소"
                 value={filter.floor_min}
                 onChange={(e) => update('floor_min', e.target.value)}
-                className="flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="min-w-0 flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
               <span className="text-slate-400 text-sm shrink-0">~</span>
               <input
@@ -186,9 +184,8 @@ function AdvancedFilterPanelInner() {
                 placeholder="최대"
                 value={filter.floor_max}
                 onChange={(e) => update('floor_max', e.target.value)}
-                className="flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="min-w-0 flex-1 h-10 rounded-xl border border-slate-300 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
-              <span className="text-xs text-slate-500 shrink-0">층</span>
             </div>
           </div>
 
