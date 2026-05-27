@@ -3,9 +3,10 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Home, Building2, PlusCircle, LogOut } from 'lucide-react'
+import { Home, Building2, PlusCircle, LogOut, ShieldCheck } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 const navItems = [
@@ -18,6 +19,22 @@ export function BottomNav() {
   const pathname = usePathname()
   const router = useRouter()
   const supabase = createClient()
+  const [isAdmin, setIsAdmin] = useState(false)
+
+  useEffect(() => {
+    async function checkAdmin() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', user.id)
+        .single()
+      console.log('[BottomNav] user:', user.id, 'profile:', data, 'error:', error)
+      setIsAdmin(data?.is_admin === true)
+    }
+    checkAdmin()
+  }, [])
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -52,6 +69,19 @@ export function BottomNav() {
             </Link>
           )
         })}
+        {isAdmin && (
+          <Link
+            href="/admin"
+            className={cn(
+              'flex flex-col items-center justify-center gap-0.5 flex-1 h-full',
+              'text-xs font-medium transition-colors',
+              pathname.startsWith('/admin') ? 'text-purple-600' : 'text-slate-500'
+            )}
+          >
+            <ShieldCheck size={22} strokeWidth={1.8} />
+            <span>관리자</span>
+          </Link>
+        )}
         <button
           onClick={handleLogout}
           className="flex flex-col items-center justify-center gap-0.5 flex-1 h-full text-xs font-medium text-slate-500"

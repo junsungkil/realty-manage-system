@@ -25,10 +25,14 @@ export default async function AdminDashboardPage() {
       .order('created_at', { ascending: false })
       .limit(5),
     admin.from('offices')
-      .select('id, office_name, properties(count)')
-      .order('created_at', { ascending: false })
-      .limit(5),
+      .select('id, office_name, properties(count)'),
   ])
+
+  const sortedOffices = (topOffices ?? []).sort((a, b) => {
+    const aCount = (a.properties as any)?.[0]?.count ?? 0
+    const bCount = (b.properties as any)?.[0]?.count ?? 0
+    return bCount - aCount
+  })
 
   const stats = [
     { label: '가입 사무소', value: totalUsers ?? 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', href: '/admin/users' },
@@ -91,7 +95,7 @@ export default async function AdminDashboardPage() {
             <Link href="/admin/properties" className="text-xs text-blue-600">전체 보기</Link>
           </div>
           <div className="flex flex-col divide-y divide-slate-50">
-            {topOffices && topOffices.length > 0 ? topOffices.map((o) => {
+            {sortedOffices.length > 0 ? sortedOffices.map((o) => {
               const count = (o.properties as any)?.[0]?.count ?? 0
               return (
                 <div key={o.id} className="py-2.5 flex items-center justify-between">

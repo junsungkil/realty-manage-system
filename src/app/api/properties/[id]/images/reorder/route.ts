@@ -17,15 +17,19 @@ export async function POST(
 
   const admin = createAdminClient()
 
-  // 소유자 확인
+  // 소유자 또는 관리자 확인
   const { data: property } = await admin
     .from('properties')
     .select('id, offices!inner(owner_id)')
     .eq('id', id)
     .single()
 
-  if (!property || (property.offices as any).owner_id !== session.user.id) {
-    return NextResponse.json({ error: '권한 없음' }, { status: 403 })
+  if (!property) return NextResponse.json({ error: '매물 없음' }, { status: 404 })
+
+  const isOwner = (property.offices as any).owner_id === session.user.id
+  if (!isOwner) {
+    const { data: profile } = await admin.from('profiles').select('is_admin').eq('id', session.user.id).single()
+    if (!profile?.is_admin) return NextResponse.json({ error: '권한 없음' }, { status: 403 })
   }
 
   // 순서 일괄 업데이트

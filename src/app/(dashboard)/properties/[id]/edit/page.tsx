@@ -2,6 +2,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { notFound } from 'next/navigation'
 import { EditPropertyForm } from './EditPropertyForm'
+import { Suspense } from 'react'
 
 export default async function EditPropertyPage({
   params,
@@ -19,5 +20,9 @@ export default async function EditPropertyPage({
 
   if (!property) notFound()
 
-  return <EditPropertyForm property={property} images={property.property_images ?? []} />
+  return (
+    <Suspense>
+      <EditPropertyForm property={property} images={property.property_images ?? []} />
+    </Suspense>
+  )
 }

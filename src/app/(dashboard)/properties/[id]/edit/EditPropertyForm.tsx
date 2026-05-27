@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useRef } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
@@ -134,6 +134,8 @@ interface Props {
 
 export function EditPropertyForm({ property, images: initialImages }: Props) {
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const fromAdmin = searchParams.get('from') === 'admin'
   const supabase = createClient()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [submitting, setSubmitting] = useState(false)
@@ -235,71 +237,116 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
     setError('')
     setSubmitting(true)
 
-    const { error: updateError } = await supabase
-      .from('properties')
-      .update({
-        title: form.title,
-        type: form.type,
-        transaction_type: form.transaction_type,
-        deposit: form.deposit,
-        monthly_rent: form.monthly_rent,
-        maintenance_fee: form.maintenance_fee,
-        address: form.address,
-        detail_address: form.detail_address || null,
-        exclusive_area: form.exclusive_area ? parseFloat(form.exclusive_area) : null,
-        room_count: Number(form.room_count) || 1,
-        bathroom_count: Number(form.bathroom_count) || 1,
-        floor: form.floor ? parseInt(form.floor) : null,
-        total_floors: form.total_floors ? parseInt(form.total_floors) : null,
-        status: form.status,
-        memo: form.memo || null,
-        has_elevator: form.has_elevator,
-        has_parking: form.has_parking,
-        direction: form.direction || null,
-        move_in_type: form.move_in_type || null,
-        move_in_date: form.move_in_type === '날짜지정' && form.move_in_date ? form.move_in_date : null,
-        tags: form.tags,
-      })
-      .eq('id', property.id)
+    const updatePayload = {
+      title: form.title,
+      type: form.type,
+      transaction_type: form.transaction_type,
+      deposit: form.deposit,
+      monthly_rent: form.monthly_rent,
+      maintenance_fee: form.maintenance_fee,
+      address: form.address,
+      detail_address: form.detail_address || null,
+      exclusive_area: form.exclusive_area ? parseFloat(form.exclusive_area) : null,
+      room_count: Number(form.room_count) || 1,
+      bathroom_count: Number(form.bathroom_count) || 1,
+      floor: form.floor ? parseInt(form.floor) : null,
+      total_floors: form.total_floors ? parseInt(form.total_floors) : null,
+      status: form.status,
+      memo: form.memo || null,
+      has_elevator: form.has_elevator,
+      has_parking: form.has_parking,
+      direction: form.direction || null,
+      move_in_type: form.move_in_type || null,
+      move_in_date: form.move_in_type === '날짜지정' && form.move_in_date ? form.move_in_date : null,
+      tags: form.tags,
+    }
 
-    if (updateError) {
+    let updateFailed = false
+    if (fromAdmin) {
+      const res = await fetch(`/api/admin/properties/${property.id}/update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatePayload),
+      })
+      if (!res.ok) updateFailed = true
+    } else {
+      const { error: updateError } = await supabase
+        .from('properties')
+        .update(updatePayload)
+        .eq('id', property.id)
+      if (updateError) updateFailed = true
+    }
+
+    if (updateFailed) {
       setError('수정에 실패했습니다.')
       setSubmitting(false)
       return
     }
 
     if (deletedImageIds.length > 0) {
-      await supabase.from('property_images').delete().in('id', deletedImageIds)
+      if (fromAdmin) {
+        await fetch(`/api/admin/properties/${property.id}/images`, {
+          method: 'DELETE',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids: deletedImageIds }),
+        })
+      } else {
+        await supabase.from('property_images').delete().in('id', deletedImageIds)
+      }
     }
 
     if (newImages.length > 0) {
       const uploadedUrls = await uploadNewImages()
       if (uploadedUrls.length > 0) {
         const isFirstImage = existingImages.length === 0 && deletedImageIds.length >= initialImages.length
-        await supabase.from('property_images').insert(
-          uploadedUrls.map((url, i) => ({
-            property_id: property.id,
-            image_url: url,
-            is_thumbnail: isFirstImage && i === 0,
-          }))
-        )
+        const imagePayload = uploadedUrls.map((url, i) => ({
+          image_url: url,
+          is_thumbnail: isFirstImage && i === 0,
+        }))
+        if (fromAdmin) {
+          await fetch(`/api/admin/properties/${property.id}/images`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ images: imagePayload }),
+          })
+        } else {
+          await supabase.from('property_images').insert(
+            imagePayload.map((img) => ({ ...img, property_id: property.id }))
+          )
+        }
       }
     }
 
     const remainingImages = existingImages.filter((img) => !deletedImageIds.includes(img.id))
     const hasThumbnail = remainingImages.some((img) => img.is_thumbnail)
     if (!hasThumbnail && remainingImages.length > 0) {
-      await supabase.from('property_images').update({ is_thumbnail: true }).eq('id', remainingImages[0].id)
+      if (fromAdmin) {
+        await fetch(`/api/admin/properties/${property.id}/images`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imageId: remainingImages[0].id }),
+        })
+      } else {
+        await supabase.from('property_images').update({ is_thumbnail: true }).eq('id', remainingImages[0].id)
+      }
     }
 
-    window.location.href = `/properties/${property.id}`
+    if (fromAdmin) {
+      router.back()
+    } else {
+      window.location.href = `/properties/${property.id}`
+    }
   }
 
   async function handleDelete() {
     if (!confirm('이 매물을 삭제하시겠습니까? 되돌릴 수 없습니다.')) return
     setDeleting(true)
     await supabase.from('properties').delete().eq('id', property.id)
-    window.location.href = '/properties'
+    if (fromAdmin) {
+      router.back()
+    } else {
+      window.location.href = '/properties'
+    }
   }
 
   const totalImageCount = existingImages.length + newImages.length

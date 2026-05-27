@@ -1,6 +1,8 @@
 // Next.js 미들웨어에서 Supabase 세션 갱신을 처리하는 유틸리티
 import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse, type NextRequest } from 'next/server'
+
 
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -48,20 +50,15 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse
   }
 
-  // /admin 경로 — 관리자 여부 확인 (service role로 profiles 조회)
+  // /admin 경로 — 관리자 여부 확인 (service role로 RLS 우회)
   if (user && pathname.startsWith('/admin')) {
-    const adminSupabase = createServerClient(
+    const adminClient = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      {
-        cookies: {
-          getAll() { return request.cookies.getAll() },
-          setAll() {},
-        },
-      }
+      { auth: { persistSession: false } }
     )
 
-    const { data: profile } = await adminSupabase
+    const { data: profile } = await adminClient
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
