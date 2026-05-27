@@ -48,9 +48,20 @@ export async function updateSession(request: NextRequest) {
     return redirectResponse
   }
 
-  // /admin 경로 — 관리자 여부 확인
+  // /admin 경로 — 관리자 여부 확인 (service role로 profiles 조회)
   if (user && pathname.startsWith('/admin')) {
-    const { data: profile } = await supabase
+    const adminSupabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        cookies: {
+          getAll() { return request.cookies.getAll() },
+          setAll() {},
+        },
+      }
+    )
+
+    const { data: profile } = await adminSupabase
       .from('profiles')
       .select('is_admin')
       .eq('id', user.id)
