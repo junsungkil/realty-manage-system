@@ -42,11 +42,25 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     const redirectResponse = NextResponse.redirect(url)
-    // 기존 쿠키를 리다이렉트 응답에도 복사
     supabaseResponse.cookies.getAll().forEach(({ name, value }) => {
       redirectResponse.cookies.set(name, value)
     })
     return redirectResponse
+  }
+
+  // /admin 경로 — 관리자 여부 확인
+  if (user && pathname.startsWith('/admin')) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+
+    if (!profile?.is_admin) {
+      const url = request.nextUrl.clone()
+      url.pathname = '/'
+      return NextResponse.redirect(url)
+    }
   }
 
   return supabaseResponse
