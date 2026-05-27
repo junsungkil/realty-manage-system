@@ -38,6 +38,7 @@ export interface Property {
   direction: Direction | null
   move_in_type: MoveInType | null
   move_in_date: string | null
+  tags: string[]
   created_at: string
   updated_at: string
   property_images?: PropertyImage[]
@@ -72,6 +73,7 @@ export interface PropertyFormData {
   direction: Direction | ''
   move_in_type: MoveInType | ''
   move_in_date: string
+  tags: string[]
 }
 
 export interface PropertyFilter {

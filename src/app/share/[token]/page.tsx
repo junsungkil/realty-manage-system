@@ -7,8 +7,9 @@ import { formatDealPrice, formatArea, formatFloor } from '@/lib/utils'
 import {
   MapPin, Maximize2, Home, Bath, Layers,
   ArrowUpDown, CarFront, Compass, CalendarDays,
-  Building2, Phone, Clock,
+  Building2, Clock,
 } from 'lucide-react'
+import { ViewTracker } from './ViewTracker'
 
 export default async function SharePage({
   params,
@@ -62,6 +63,9 @@ export default async function SharePage({
 
   return (
     <div className="flex flex-col min-h-screen bg-slate-50">
+      {/* 조회수 트래커 — 페이지 로드 시 카운트 증가 */}
+      <ViewTracker token={token} />
+
       {/* 상단 공유 배너 */}
       <div className="bg-blue-600 px-4 py-2 flex items-center justify-center gap-2">
         <Building2 size={14} className="text-blue-200" />

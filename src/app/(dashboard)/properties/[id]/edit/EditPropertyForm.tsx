@@ -7,8 +7,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { ChevronLeft, Trash2, Camera, X } from 'lucide-react'
+import { ChevronLeft, Trash2, Camera, X, ChevronRight } from 'lucide-react'
 import { PropertyType, TransactionType, Direction, MoveInType } from '@/types'
+import { TagInput } from '@/components/ui/TagInput'
 
 const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: '아파트', label: '아파트' },
@@ -95,6 +96,7 @@ interface ExistingImage {
   id: string
   image_url: string
   is_thumbnail: boolean
+  sort_order: number
 }
 
 interface NewImage {
@@ -125,6 +127,7 @@ interface Props {
     direction: string | null
     move_in_type: string | null
     move_in_date: string | null
+    tags: string[]
   }
   images: ExistingImage[]
 }
@@ -137,9 +140,25 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
-  const [existingImages, setExistingImages] = useState<ExistingImage[]>(initialImages)
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>(
+    [...initialImages].sort((a, b) => a.sort_order - b.sort_order)
+  )
   const [deletedImageIds, setDeletedImageIds] = useState<string[]>([])
   const [newImages, setNewImages] = useState<NewImage[]>([])
+
+  async function moveImage(index: number, direction: 'left' | 'right') {
+    const newArr = [...existingImages]
+    const swapWith = direction === 'left' ? index - 1 : index + 1
+    if (swapWith < 0 || swapWith >= newArr.length) return
+    ;[newArr[index], newArr[swapWith]] = [newArr[swapWith], newArr[index]]
+    setExistingImages(newArr)
+    // 순서 즉시 저장
+    await fetch(`/api/properties/${property.id}/images/reorder`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderedIds: newArr.map((img) => img.id) }),
+    })
+  }
 
   const [form, setForm] = useState({
     title: property.title,
@@ -162,9 +181,10 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
     direction: (property.direction ?? '') as Direction | '',
     move_in_type: (property.move_in_type ?? '') as MoveInType | '',
     move_in_date: property.move_in_date ?? '',
+    tags: property.tags ?? [],
   })
 
-  function update(field: string, value: string | number | boolean | null) {
+  function update(field: string, value: string | number | boolean | null | string[]) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -238,6 +258,7 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
         direction: form.direction || null,
         move_in_type: form.move_in_type || null,
         move_in_date: form.move_in_type === '날짜지정' && form.move_in_date ? form.move_in_date : null,
+        tags: form.tags,
       })
       .eq('id', property.id)
 
@@ -315,9 +336,11 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
             {existingImages.map((img, i) => (
               <div key={img.id} className="relative shrink-0 w-20 h-20">
                 <Image src={img.image_url} alt={`사진 ${i + 1}`} fill className="object-cover rounded-xl" sizes="80px" />
-                {img.is_thumbnail && (
+                {/* 대표 배지 */}
+                {i === 0 && (
                   <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center rounded-b-xl py-0.5">대표</span>
                 )}
+                {/* 삭제 버튼 */}
                 <button
                   type="button"
                   onClick={() => removeExistingImage(img.id)}
@@ -325,6 +348,27 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
                 >
                   <X size={11} className="text-white" />
                 </button>
+                {/* 순서 이동 버튼 */}
+                <div className="absolute bottom-0 left-0 right-0 flex justify-between px-0.5 pb-0.5">
+                  {i > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => moveImage(i, 'left')}
+                      className="w-5 h-5 bg-black/60 rounded-full flex items-center justify-center"
+                    >
+                      <ChevronLeft size={11} className="text-white" />
+                    </button>
+                  )}
+                  {i < existingImages.length - 1 && (
+                    <button
+                      type="button"
+                      onClick={() => moveImage(i, 'right')}
+                      className="w-5 h-5 bg-black/60 rounded-full flex items-center justify-center ml-auto"
+                    >
+                      <ChevronRight size={11} className="text-white" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
             {newImages.map((img, i) => (
@@ -500,6 +544,18 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
             rows={3}
             placeholder="특이사항, 추가 메모 등"
             className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          />
+        </section>
+
+        {/* 태그 */}
+        <section>
+          <label className="text-sm font-medium text-slate-700 block mb-1">
+            태그 <span className="text-xs text-slate-400 font-normal">(최대 10개, Enter로 추가)</span>
+          </label>
+          <TagInput
+            tags={form.tags}
+            onChange={(tags) => update('tags', tags)}
+            placeholder="예) 신축, 역세권, 풀옵션"
           />
         </section>
 

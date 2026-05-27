@@ -100,6 +100,19 @@ export function PropertyCard({ property }: PropertyCardProps) {
                   </span>
                 )}
               </div>
+              {/* 태그 */}
+              {property.tags && property.tags.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {property.tags.slice(0, 4).map((tag) => (
+                    <span key={tag} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full">
+                      #{tag}
+                    </span>
+                  ))}
+                  {property.tags.length > 4 && (
+                    <span className="text-[10px] text-slate-400">+{property.tags.length - 4}</span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

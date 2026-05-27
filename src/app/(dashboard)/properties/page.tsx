@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { PropertyCard } from '@/components/property/PropertyCard'
 import { FilterBar } from '@/components/property/FilterBar'
 import { SearchBar } from '@/components/property/SearchBar'
+import { ExportButton } from '@/components/property/ExportButton'
 import { Property } from '@/types'
 import { PlusCircle } from 'lucide-react'
 import Link from 'next/link'
@@ -125,9 +126,12 @@ export default async function PropertiesPage({
       <div className="bg-white px-4 pt-12 pb-3 sticky top-0 z-10 border-b border-slate-100">
         <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-bold text-slate-900">매물 목록</h1>
-          <Link href="/properties/create" className="text-blue-600">
-            <PlusCircle size={24} />
-          </Link>
+          <div className="flex items-center gap-2">
+            <ExportButton />
+            <Link href="/properties/create" className="text-blue-600">
+              <PlusCircle size={24} />
+            </Link>
+          </div>
         </div>
         {/* 검색 + 상세필터 */}
         <Suspense>

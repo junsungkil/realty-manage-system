@@ -14,6 +14,7 @@ import {
 } from '@/lib/utils'
 import { ChevronLeft, MapPin, Home, Bath, Layers, Pencil, CarFront, ArrowUpDown, Compass, CalendarDays } from 'lucide-react'
 import { ImageSlider } from './ImageSlider'
+import { CopyPropertyButton } from './CopyPropertyButton'
 import Link from 'next/link'
 
 const dealTypeColor: Record<string, string> = {
@@ -41,10 +42,10 @@ export default async function PropertyDetailPage({
   const p = property as Property
   const images = p.property_images ?? []
 
-  // 기존 공유 링크 토큰 조회
+  // 기존 공유 링크 토큰 + 조회수 조회
   const { data: existingShare } = await supabase
     .from('property_shares')
-    .select('token')
+    .select('token, view_count')
     .eq('property_id', id)
     .maybeSingle()
 
@@ -56,7 +57,8 @@ export default async function PropertyDetailPage({
           <ChevronLeft size={24} className="text-slate-700" />
         </Link>
         <h1 className="flex-1 text-lg font-bold text-slate-900 truncate">{p.title}</h1>
-        <ShareSheet propertyId={p.id} existingToken={existingShare?.token ?? null} />
+        <ShareSheet propertyId={p.id} existingToken={existingShare?.token ?? null} viewCount={existingShare?.view_count ?? 0} />
+        <CopyPropertyButton propertyId={p.id} />
         <Link href={`/properties/${p.id}/edit`} className="p-2 text-slate-500">
           <Pencil size={18} />
         </Link>

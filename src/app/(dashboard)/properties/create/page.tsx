@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Camera, X, ChevronLeft } from 'lucide-react'
 import { PropertyFormData, PropertyType, TransactionType, Direction, MoveInType } from '@/types'
+import { TagInput } from '@/components/ui/TagInput'
 
 const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: '아파트', label: '아파트' },
@@ -122,11 +123,12 @@ export default function CreatePropertyPage() {
     direction: '',
     move_in_type: '',
     move_in_date: '',
+    tags: [],
   })
 
   const isMonthly = form.transaction_type === '월세'
 
-  function updateForm(field: keyof PropertyFormData, value: string | number | boolean | null) {
+  function updateForm(field: keyof PropertyFormData, value: string | number | boolean | null | string[]) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -215,6 +217,7 @@ export default function CreatePropertyPage() {
         direction: form.direction || null,
         move_in_type: form.move_in_type || null,
         move_in_date: form.move_in_type === '날짜지정' && form.move_in_date ? form.move_in_date : null,
+        tags: form.tags,
       })
       .select()
       .single()
@@ -494,6 +497,18 @@ export default function CreatePropertyPage() {
             onChange={(e) => updateForm('memo', e.target.value)}
             rows={3}
             className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+          />
+        </section>
+
+        {/* 태그 */}
+        <section>
+          <label className="text-sm font-medium text-slate-700 block mb-1">
+            태그 <span className="text-xs text-slate-400 font-normal">(최대 10개, Enter로 추가)</span>
+          </label>
+          <TagInput
+            tags={form.tags}
+            onChange={(tags) => updateForm('tags', tags)}
+            placeholder="예) 신축, 역세권, 풀옵션"
           />
         </section>
 

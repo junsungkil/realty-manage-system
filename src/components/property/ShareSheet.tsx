@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import {
-  Share2, X, Copy, Check, Trash2, ChevronDown, Link2,
+  Share2, X, Copy, Check, Trash2, Link2, Eye,
 } from 'lucide-react'
 import { ShareField, SHARE_FIELD_LABELS, DEFAULT_SHARE_FIELDS } from '@/types'
 
@@ -17,9 +17,10 @@ const EXPIRES_OPTIONS = [
 interface Props {
   propertyId: string
   existingToken?: string | null
+  viewCount?: number
 }
 
-export function ShareSheet({ propertyId, existingToken }: Props) {
+export function ShareSheet({ propertyId, existingToken, viewCount = 0 }: Props) {
   const [open, setOpen] = useState(false)
   const [fields, setFields] = useState<ShareField[]>(DEFAULT_SHARE_FIELDS)
   const [expiresDays, setExpiresDays] = useState<number | null>(7)
@@ -27,6 +28,7 @@ export function ShareSheet({ propertyId, existingToken }: Props) {
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [currentViewCount, setCurrentViewCount] = useState(viewCount)
 
   const shareUrl = token
     ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${token}`
@@ -68,6 +70,7 @@ export function ShareSheet({ propertyId, existingToken }: Props) {
       await fetch(`/api/share/${token}`, { method: 'DELETE' })
       setToken(null)
       setFields(DEFAULT_SHARE_FIELDS)
+      setCurrentViewCount(0)
     } finally {
       setDeleting(false)
     }
@@ -110,7 +113,13 @@ export function ShareSheet({ propertyId, existingToken }: Props) {
           {token && shareUrl && (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-blue-700">생성된 공유 링크</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-blue-700">생성된 공유 링크</span>
+                  <span className="flex items-center gap-1 text-xs text-blue-500 bg-blue-100 px-1.5 py-0.5 rounded-full">
+                    <Eye size={11} />
+                    {currentViewCount}
+                  </span>
+                </div>
                 <button
                   type="button"
                   onClick={handleDelete}
