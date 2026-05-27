@@ -24,6 +24,7 @@ interface SearchParams {
   has_elevator?: string
   has_parking?: string
   direction?: string
+  tag?: string
 }
 
 async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
@@ -67,11 +68,11 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
   if (searchParams.type) query = query.eq('type', searchParams.type)
   if (searchParams.status) query = query.eq('status', searchParams.status)
 
-  // 검색어: 주소 + 별칭 + 동호수 + 메모
+  // 검색어: 주소 + 별칭 + 동호수 + 메모 + 태그
   if (searchParams.q) {
     const q = searchParams.q
     query = query.or(
-      `address.ilike.%${q}%,title.ilike.%${q}%,detail_address.ilike.%${q}%,memo.ilike.%${q}%`
+      `address.ilike.%${q}%,title.ilike.%${q}%,detail_address.ilike.%${q}%,memo.ilike.%${q}%,tags.cs.{${q}}`
     )
   }
 
@@ -89,6 +90,8 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
     query = query.eq('has_parking', searchParams.has_parking === 'true')
   }
   if (searchParams.direction) query = query.eq('direction', searchParams.direction)
+  // 태그 필터 (상세필터에서 특정 태그 선택 시)
+  if (searchParams.tag) query = query.contains('tags', [searchParams.tag])
 
   const { data: properties } = await query
 

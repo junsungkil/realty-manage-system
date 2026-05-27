@@ -1,6 +1,10 @@
 // 매물 목록에서 사용하는 카드 컴포넌트
+'use client'
+
+import { Suspense } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { MapPin, Maximize2 } from 'lucide-react'
 import { Property } from '@/types'
 import { Badge } from '@/components/ui/Badge'
@@ -16,9 +20,20 @@ interface PropertyCardProps {
   property: Property
 }
 
-export function PropertyCard({ property }: PropertyCardProps) {
+function PropertyCardInner({ property }: PropertyCardProps) {
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const thumbnail = property.property_images?.find((img) => img.is_thumbnail)
     ?? property.property_images?.[0]
+
+  function handleTagClick(e: React.MouseEvent, tag: string) {
+    e.preventDefault()
+    e.stopPropagation()
+    const params = new URLSearchParams(searchParams.toString())
+    params.set('tag', tag)
+    params.delete('q') // 태그 필터 시 텍스트 검색 초기화
+    router.push(`/properties?${params.toString()}`)
+  }
 
   const dealTypeColor =
     property.transaction_type === '매매'
@@ -100,13 +115,18 @@ export function PropertyCard({ property }: PropertyCardProps) {
                   </span>
                 )}
               </div>
-              {/* 태그 */}
+              {/* 태그 — 클릭 시 해당 태그로 필터링 */}
               {property.tags && property.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1">
                   {property.tags.slice(0, 4).map((tag) => (
-                    <span key={tag} className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full">
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={(e) => handleTagClick(e, tag)}
+                      className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] rounded-full active:bg-blue-100 active:text-blue-600 transition-colors"
+                    >
                       #{tag}
-                    </span>
+                    </button>
                   ))}
                   {property.tags.length > 4 && (
                     <span className="text-[10px] text-slate-400">+{property.tags.length - 4}</span>
@@ -118,5 +138,16 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </div>
       </article>
     </Link>
+  )
+}
+
+// useSearchParams 사용으로 인한 Suspense 래퍼
+export function PropertyCard({ property }: PropertyCardProps) {
+  return (
+    <Suspense fallback={
+      <div className="h-28 bg-slate-100 rounded-2xl animate-pulse" />
+    }>
+      <PropertyCardInner property={property} />
+    </Suspense>
   )
 }

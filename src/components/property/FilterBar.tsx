@@ -4,6 +4,7 @@
 import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { TransactionType, PropertyType, PropertyStatus } from '@/types'
+import { X } from 'lucide-react'
 
 const transactionTabs: { value: TransactionType | 'ALL'; label: string }[] = [
   { value: 'ALL', label: '전체' },
@@ -35,6 +36,7 @@ export function FilterBar() {
   const currentTransaction = searchParams.get('transaction') ?? 'ALL'
   const currentType = searchParams.get('type') ?? 'ALL'
   const currentStatus = searchParams.get('status') ?? 'ALL'
+  const currentTag = searchParams.get('tag') ?? ''
 
   function updateFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString())
@@ -43,6 +45,12 @@ export function FilterBar() {
     } else {
       params.set(key, value)
     }
+    router.push(`${pathname}?${params.toString()}`)
+  }
+
+  function clearTag() {
+    const params = new URLSearchParams(searchParams.toString())
+    params.delete('tag')
     router.push(`${pathname}?${params.toString()}`)
   }
 
@@ -65,6 +73,19 @@ export function FilterBar() {
           </button>
         ))}
       </div>
+
+      {/* 태그 필터 활성 시 표시 */}
+      {currentTag && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-blue-50 border-b border-blue-100">
+          <span className="text-xs text-blue-600">태그 필터:</span>
+          <span className="flex items-center gap-1 px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+            #{currentTag}
+            <button type="button" onClick={clearTag} className="text-blue-400 hover:text-blue-700">
+              <X size={11} />
+            </button>
+          </span>
+        </div>
+      )}
 
       {/* 매물 유형 + 상태 필터 */}
       <div className="flex gap-2 px-4 py-2.5 overflow-x-auto no-scrollbar">
