@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Share2, X, Copy, Check, Trash2, Link2, Eye,
 } from 'lucide-react'
@@ -29,9 +29,15 @@ export function ShareSheet({ propertyId, existingToken, viewCount = 0 }: Props) 
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [currentViewCount, setCurrentViewCount] = useState(viewCount)
+  const [origin, setOrigin] = useState('')
 
-  const shareUrl = token
-    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/share/${token}`
+  // 클라이언트 마운트 후에만 origin 설정 (hydration 불일치 방지)
+  useEffect(() => {
+    setOrigin(window.location.origin)
+  }, [])
+
+  const shareUrl = token && origin
+    ? `${origin}/share/${token}`
     : null
 
   function toggleField(field: ShareField) {
