@@ -54,7 +54,6 @@ export function formatFloor(floor: number | null, totalFloors: number | null): s
 export function formatStatus(status: string): string {
   const map: Record<string, string> = {
     AVAILABLE: '진행중',
-    RESERVED: '가계약',
     COMPLETED: '완료',
   }
   return map[status] ?? status
@@ -64,7 +63,6 @@ export function formatStatus(status: string): string {
 export function getStatusColor(status: string): string {
   const map: Record<string, string> = {
     AVAILABLE: 'bg-green-100 text-green-800',
-    RESERVED: 'bg-yellow-100 text-yellow-800',
     COMPLETED: 'bg-gray-100 text-gray-600',
   }
   return map[status] ?? 'bg-gray-100 text-gray-600'

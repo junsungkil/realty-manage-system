@@ -2,8 +2,9 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PropertyCard } from '@/components/property/PropertyCard'
 import { FilterBar } from '@/components/property/FilterBar'
+import { SearchBar } from '@/components/property/SearchBar'
 import { Property } from '@/types'
-import { Search, PlusCircle } from 'lucide-react'
+import { PlusCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense } from 'react'
 
@@ -12,12 +13,21 @@ interface SearchParams {
   type?: string
   status?: string
   q?: string
+  // 고급 필터
+  area_min?: string
+  area_max?: string
+  deposit_min?: string
+  deposit_max?: string
+  floor_min?: string
+  floor_max?: string
+  has_elevator?: string
+  has_parking?: string
+  direction?: string
 }
 
 async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
   const supabase = createAdminClient()
 
-  // 세션은 쿠키에서 직접 읽기 (SSL 우회)
   const { createClient: createServerClient } = await import('@/lib/supabase/server')
   const serverSupabase = await createServerClient()
   const { data: { session } } = await serverSupabase.auth.getSession()
@@ -51,18 +61,33 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
     .eq('office_id', office.id)
     .order('created_at', { ascending: false })
 
-  if (searchParams.transaction) {
-    query = query.eq('transaction_type', searchParams.transaction)
-  }
-  if (searchParams.type) {
-    query = query.eq('type', searchParams.type)
-  }
-  if (searchParams.status) {
-    query = query.eq('status', searchParams.status)
-  }
+  // 기본 필터
+  if (searchParams.transaction) query = query.eq('transaction_type', searchParams.transaction)
+  if (searchParams.type) query = query.eq('type', searchParams.type)
+  if (searchParams.status) query = query.eq('status', searchParams.status)
+
+  // 검색어: 주소 + 별칭 + 동호수 + 메모
   if (searchParams.q) {
-    query = query.or(`address.ilike.%${searchParams.q}%,title.ilike.%${searchParams.q}%`)
+    const q = searchParams.q
+    query = query.or(
+      `address.ilike.%${q}%,title.ilike.%${q}%,detail_address.ilike.%${q}%,memo.ilike.%${q}%`
+    )
   }
+
+  // 고급 필터
+  if (searchParams.area_min) query = query.gte('exclusive_area', Number(searchParams.area_min))
+  if (searchParams.area_max) query = query.lte('exclusive_area', Number(searchParams.area_max))
+  if (searchParams.deposit_min) query = query.gte('deposit', Number(searchParams.deposit_min))
+  if (searchParams.deposit_max) query = query.lte('deposit', Number(searchParams.deposit_max))
+  if (searchParams.floor_min) query = query.gte('floor', Number(searchParams.floor_min))
+  if (searchParams.floor_max) query = query.lte('floor', Number(searchParams.floor_max))
+  if (searchParams.has_elevator !== undefined && searchParams.has_elevator !== '') {
+    query = query.eq('has_elevator', searchParams.has_elevator === 'true')
+  }
+  if (searchParams.has_parking !== undefined && searchParams.has_parking !== '') {
+    query = query.eq('has_parking', searchParams.has_parking === 'true')
+  }
+  if (searchParams.direction) query = query.eq('direction', searchParams.direction)
 
   const { data: properties } = await query
 
@@ -70,9 +95,9 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
         <PlusCircle size={40} className="mb-3 opacity-40" />
-        <p className="text-sm font-medium">등록된 매물이 없습니다.</p>
+        <p className="text-sm font-medium">조건에 맞는 매물이 없습니다.</p>
         <Link href="/properties/create" className="mt-4 text-sm text-blue-600 font-medium">
-          첫 매물 등록하기
+          매물 등록하기
         </Link>
       </div>
     )
@@ -104,19 +129,13 @@ export default async function PropertiesPage({
             <PlusCircle size={24} />
           </Link>
         </div>
-        {/* 검색 */}
-        <form method="GET" className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            name="q"
-            defaultValue={params.q ?? ''}
-            placeholder="주소로 검색"
-            className="w-full h-10 pl-9 pr-4 rounded-xl bg-slate-100 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </form>
+        {/* 검색 + 상세필터 */}
+        <Suspense>
+          <SearchBar />
+        </Suspense>
       </div>
 
-      {/* 필터 */}
+      {/* 필터 탭 */}
       <Suspense>
         <FilterBar />
       </Suspense>

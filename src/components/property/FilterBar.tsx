@@ -24,7 +24,6 @@ const typeOptions: { value: PropertyType | 'ALL'; label: string }[] = [
 const statusOptions: { value: PropertyStatus | 'ALL'; label: string }[] = [
   { value: 'ALL', label: '전체' },
   { value: 'AVAILABLE', label: '진행중' },
-  { value: 'RESERVED', label: '가계약' },
   { value: 'COMPLETED', label: '완료' },
 ]
 

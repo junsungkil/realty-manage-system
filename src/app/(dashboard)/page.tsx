@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { PropertyCard } from '@/components/property/PropertyCard'
 import { Property } from '@/types'
-import { Building2, TrendingUp, Clock, CheckCircle2, PlusCircle } from 'lucide-react'
+import { Building2, TrendingUp, CheckCircle2, PlusCircle } from 'lucide-react'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -31,13 +31,11 @@ export default async function DashboardPage() {
   const [
     { count: totalCount },
     { count: availableCount },
-    { count: reservedCount },
     { count: completedCount },
     { data: recentProperties },
   ] = await Promise.all([
     admin.from('properties').select('*', { count: 'exact', head: true }).eq('office_id', officeId),
     admin.from('properties').select('*', { count: 'exact', head: true }).eq('office_id', officeId).eq('status', 'AVAILABLE'),
-    admin.from('properties').select('*', { count: 'exact', head: true }).eq('office_id', officeId).eq('status', 'RESERVED'),
     admin.from('properties').select('*', { count: 'exact', head: true }).eq('office_id', officeId).eq('status', 'COMPLETED'),
     admin.from('properties').select('*, property_images(*)').eq('office_id', officeId).eq('status', 'AVAILABLE').order('created_at', { ascending: false }).limit(3),
   ])
@@ -55,7 +53,6 @@ export default async function DashboardPage() {
   const stats = [
     { label: '전체', value: totalCount ?? 0, icon: Building2, color: 'text-slate-600', bg: 'bg-slate-100' },
     { label: '진행중', value: availableCount ?? 0, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-100' },
-    { label: '가계약', value: reservedCount ?? 0, icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-100' },
     { label: '완료', value: completedCount ?? 0, icon: CheckCircle2, color: 'text-blue-600', bg: 'bg-blue-100' },
   ]
 
@@ -69,7 +66,7 @@ export default async function DashboardPage() {
 
       {/* 통계 카드 */}
       <div className="px-4 -mt-4">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 grid grid-cols-4 gap-3">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 grid grid-cols-3 gap-3">
           {stats.map(({ label, value, icon: Icon, color, bg }) => (
             <div key={label} className="flex flex-col items-center gap-1.5">
               <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${bg}`}>

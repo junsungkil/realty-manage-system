@@ -3,10 +3,8 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Button } from '@/components/ui/Button'
-import { Input } from '@/components/ui/Input'
 import { Toast, useToast } from '@/components/ui/Toast'
-import { Building2 } from 'lucide-react'
+import { Building2, Mail, Lock, ArrowRight } from 'lucide-react'
 
 export default function LoginPage() {
   const supabase = createClient()
@@ -31,47 +29,103 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="w-full max-w-sm">
+    <div className="flex flex-col items-center w-full max-w-sm mx-auto">
       {toast && <Toast message={toast.message} type={toast.type} onClose={closeToast} />}
 
+      {/* 로고 영역 */}
       <div className="flex flex-col items-center mb-8">
-        <div className="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center mb-3">
-          <Building2 size={28} className="text-white" />
+        <div className="relative mb-4">
+          <div className="w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' }}
+          >
+            <Building2 size={30} className="text-white" />
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white/20" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900">매물관리</h1>
-        <p className="text-sm text-slate-500 mt-1">중개사무소 전용 매물 관리 시스템</p>
+        <h1 className="text-2xl font-bold text-white tracking-tight">매물관리</h1>
+        <p className="text-sm text-blue-200 mt-1">공인중개사 전용 매물 관리 시스템</p>
       </div>
 
-      <form onSubmit={handleLogin} className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col gap-4">
-        <Input
-          id="email"
-          label="이메일"
-          type="email"
-          placeholder="office@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-        />
-        <Input
-          id="password"
-          label="비밀번호"
-          type="password"
-          placeholder="비밀번호를 입력하세요"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          autoComplete="current-password"
-        />
+      {/* 카드 */}
+      <div className="w-full rounded-3xl p-6 shadow-2xl"
+        style={{
+          background: 'rgba(255,255,255,0.08)',
+          backdropFilter: 'blur(20px)',
+          border: '1px solid rgba(255,255,255,0.15)',
+        }}
+      >
+        <h2 className="text-lg font-semibold text-white mb-5">로그인</h2>
 
-        <Button type="submit" size="lg" loading={loading} className="w-full mt-2">
-          로그인
-        </Button>
-      </form>
+        <form onSubmit={handleLogin} className="flex flex-col gap-4">
+          {/* 이메일 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-blue-200">이메일</label>
+            <div className="relative">
+              <Mail size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-300 pointer-events-none" />
+              <input
+                type="email"
+                placeholder="office@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                autoComplete="email"
+                className="w-full h-12 pl-10 pr-4 rounded-xl text-sm text-white placeholder:text-blue-300/50 outline-none transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'rgba(96,165,250,0.7)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+              />
+            </div>
+          </div>
 
-      <p className="text-center text-sm text-slate-500 mt-4">
+          {/* 비밀번호 */}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-medium text-blue-200">비밀번호</label>
+            <div className="relative">
+              <Lock size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-blue-300 pointer-events-none" />
+              <input
+                type="password"
+                placeholder="비밀번호를 입력하세요"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                autoComplete="current-password"
+                className="w-full h-12 pl-10 pr-4 rounded-xl text-sm text-white placeholder:text-blue-300/50 outline-none transition-all"
+                style={{
+                  background: 'rgba(255,255,255,0.08)',
+                  border: '1px solid rgba(255,255,255,0.15)',
+                }}
+                onFocus={(e) => e.currentTarget.style.borderColor = 'rgba(96,165,250,0.7)'}
+                onBlur={(e) => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+              />
+            </div>
+          </div>
+
+          {/* 로그인 버튼 */}
+          <button
+            type="submit"
+            disabled={loading}
+            className="mt-1 w-full h-12 rounded-xl font-semibold text-white text-sm flex items-center justify-center gap-2 transition-opacity disabled:opacity-60 shadow-lg"
+            style={{ background: 'linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%)' }}
+          >
+            {loading ? (
+              <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <>
+                로그인
+                <ArrowRight size={16} />
+              </>
+            )}
+          </button>
+        </form>
+      </div>
+
+      {/* 회원가입 링크 */}
+      <p className="text-center text-sm text-blue-200 mt-5">
         계정이 없으신가요?{' '}
-        <Link href="/signup" className="text-blue-600 font-medium">
+        <Link href="/signup" className="text-white font-semibold underline underline-offset-2">
           회원가입
         </Link>
       </p>

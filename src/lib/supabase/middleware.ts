@@ -30,7 +30,12 @@ export async function updateSession(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isPublicPath = pathname.startsWith('/login') || pathname.startsWith('/signup')
+  const isPublicPath =
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname.startsWith('/auth') ||
+    pathname.startsWith('/api') ||
+    pathname.startsWith('/share')   // 매물 공유 링크 — 로그인 불필요
 
   // 비로그인 상태에서 보호된 경로 접근 시 로그인으로
   if (!user && !isPublicPath) {

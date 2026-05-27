@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { Camera, X, ChevronLeft } from 'lucide-react'
-import { PropertyFormData, PropertyType, TransactionType } from '@/types'
+import { PropertyFormData, PropertyType, TransactionType, Direction, MoveInType } from '@/types'
 
 const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: '아파트', label: '아파트' },
@@ -25,11 +25,73 @@ const TRANSACTION_TYPES: { value: TransactionType; label: string }[] = [
   { value: '매매', label: '매매' },
 ]
 
+const DIRECTIONS: { value: Direction; label: string }[] = [
+  { value: '남향', label: '남향' },
+  { value: '남동향', label: '남동향' },
+  { value: '동향', label: '동향' },
+  { value: '남서향', label: '남서향' },
+  { value: '서향', label: '서향' },
+  { value: '북향', label: '북향' },
+  { value: '북동향', label: '북동향' },
+  { value: '북서향', label: '북서향' },
+]
+
+const MOVE_IN_TYPES: { value: MoveInType; label: string }[] = [
+  { value: '즉시입주', label: '즉시입주' },
+  { value: '날짜협의', label: '날짜협의' },
+  { value: '날짜지정', label: '날짜지정' },
+]
+
 interface UploadedImage {
   file: File
   preview: string
   publicUrl?: string
   uploading: boolean
+}
+
+// 2-상태 토글: true / false
+function BoolToggle({
+  label,
+  value,
+  trueLabel = '있음',
+  falseLabel = '없음',
+  onChange,
+}: {
+  label: string
+  value: boolean
+  trueLabel?: string
+  falseLabel?: string
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(true)}
+          className={`flex-1 h-10 rounded-xl text-sm font-medium border transition-colors ${
+            value === true
+              ? 'bg-blue-600 border-blue-600 text-white'
+              : 'bg-white border-slate-300 text-slate-500'
+          }`}
+        >
+          {trueLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className={`flex-1 h-10 rounded-xl text-sm font-medium border transition-colors ${
+            value === false
+              ? 'bg-slate-600 border-slate-600 text-white'
+              : 'bg-white border-slate-300 text-slate-500'
+          }`}
+        >
+          {falseLabel}
+        </button>
+      </div>
+    </div>
+  )
 }
 
 export default function CreatePropertyPage() {
@@ -55,18 +117,22 @@ export default function CreatePropertyPage() {
     floor: '',
     total_floors: '',
     memo: '',
+    has_elevator: true,
+    has_parking: true,
+    direction: '',
+    move_in_type: '',
+    move_in_date: '',
   })
 
   const isMonthly = form.transaction_type === '월세'
 
-  function updateForm(field: keyof PropertyFormData, value: string | number) {
+  function updateForm(field: keyof PropertyFormData, value: string | number | boolean | null) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
   async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? [])
     if (!files.length) return
-
     const newImages: UploadedImage[] = files.map((file) => ({
       file,
       preview: URL.createObjectURL(file),
@@ -84,36 +150,25 @@ export default function CreatePropertyPage() {
 
   async function uploadImagesToR2(propertyId: string): Promise<string[]> {
     const urls: string[] = []
-
     for (const img of images) {
       try {
         const res = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: img.file.name,
-            contentType: img.file.type,
-            propertyId,
-          }),
+          body: JSON.stringify({ filename: img.file.name, contentType: img.file.type, propertyId }),
         })
-
         if (!res.ok) continue
-
         const { presignedUrl, publicUrl } = await res.json()
-
         const uploadRes = await fetch(presignedUrl, {
           method: 'PUT',
           body: img.file,
           headers: { 'Content-Type': img.file.type },
         })
-
         if (uploadRes.ok) urls.push(publicUrl)
       } catch {
-        // R2 미설정 시 이미지 업로드 실패해도 매물 등록은 계속 진행
         console.warn('이미지 업로드 실패, 건너뜀')
       }
     }
-
     return urls
   }
 
@@ -155,6 +210,11 @@ export default function CreatePropertyPage() {
         floor: form.floor ? parseInt(form.floor) : null,
         total_floors: form.total_floors ? parseInt(form.total_floors) : null,
         memo: form.memo || null,
+        has_elevator: form.has_elevator,
+        has_parking: form.has_parking,
+        direction: form.direction || null,
+        move_in_type: form.move_in_type || null,
+        move_in_date: form.move_in_type === '날짜지정' && form.move_in_date ? form.move_in_date : null,
       })
       .select()
       .single()
@@ -206,12 +266,7 @@ export default function CreatePropertyPage() {
             </button>
             {images.map((img, i) => (
               <div key={i} className="relative shrink-0 w-20 h-20">
-                <Image
-                  src={img.preview}
-                  alt={`이미지 ${i + 1}`}
-                  fill
-                  className="object-cover rounded-xl"
-                />
+                <Image src={img.preview} alt={`이미지 ${i + 1}`} fill className="object-cover rounded-xl" />
                 {i === 0 && (
                   <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center rounded-b-xl py-0.5">
                     대표
@@ -227,14 +282,7 @@ export default function CreatePropertyPage() {
               </div>
             ))}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleImageSelect}
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
         </section>
 
         {/* 기본 정보 */}
@@ -247,7 +295,6 @@ export default function CreatePropertyPage() {
             onChange={(e) => updateForm('title', e.target.value)}
             required
           />
-
           <div className="grid grid-cols-2 gap-3">
             <Select
               id="type"
@@ -373,24 +420,84 @@ export default function CreatePropertyPage() {
           </div>
         </section>
 
+        {/* 추가 정보 */}
+        <section className="flex flex-col gap-4">
+          <p className="text-sm font-semibold text-slate-800 -mb-1">추가 정보</p>
+
+          <BoolToggle
+            label="엘리베이터"
+            value={form.has_elevator as boolean}
+            trueLabel="있음"
+            falseLabel="없음"
+            onChange={(v) => updateForm('has_elevator', v)}
+          />
+          <BoolToggle
+            label="주차"
+            value={form.has_parking as boolean}
+            trueLabel="가능"
+            falseLabel="불가"
+            onChange={(v) => updateForm('has_parking', v)}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="direction" className="text-sm font-medium text-slate-700">방향</label>
+              <select
+                id="direction"
+                value={form.direction}
+                onChange={(e) => updateForm('direction', e.target.value)}
+                className="h-11 rounded-xl border border-slate-300 bg-white text-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">미선택</option>
+                {DIRECTIONS.map((d) => (
+                  <option key={d.value} value={d.value}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="move_in_type" className="text-sm font-medium text-slate-700">입주 가능일</label>
+              <select
+                id="move_in_type"
+                value={form.move_in_type}
+                onChange={(e) => updateForm('move_in_type', e.target.value)}
+                className="h-11 rounded-xl border border-slate-300 bg-white text-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">미선택</option>
+                {MOVE_IN_TYPES.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {form.move_in_type === '날짜지정' && (
+            <Input
+              id="move_in_date"
+              label="입주 날짜"
+              type="date"
+              value={form.move_in_date}
+              onChange={(e) => updateForm('move_in_date', e.target.value)}
+            />
+          )}
+        </section>
+
         {/* 내부 메모 */}
         <section>
           <label htmlFor="memo" className="text-sm font-medium text-slate-700 block mb-1">
-            내부 메모 (비공개)
+            비고 / 추가사항
           </label>
           <textarea
             id="memo"
-            placeholder="집주인 성향, 특이사항, 비밀번호 등 (외부 공개 안 됨)"
+            placeholder="특이사항, 추가 메모 등"
             value={form.memo}
             onChange={(e) => updateForm('memo', e.target.value)}
             rows={3}
-            className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-2.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           />
         </section>
 
-        {error && (
-          <p className="text-sm text-red-500 text-center">{error}</p>
-        )}
+        {error && <p className="text-sm text-red-500 text-center">{error}</p>}
 
         <Button type="submit" size="lg" loading={submitting} className="w-full">
           매물 등록 완료

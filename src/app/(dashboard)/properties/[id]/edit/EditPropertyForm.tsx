@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
 import { ChevronLeft, Trash2, Camera, X } from 'lucide-react'
-import { PropertyType, TransactionType } from '@/types'
+import { PropertyType, TransactionType, Direction, MoveInType } from '@/types'
 
 const PROPERTY_TYPES: { value: PropertyType; label: string }[] = [
   { value: '아파트', label: '아파트' },
@@ -26,9 +26,70 @@ const TRANSACTION_TYPES: { value: TransactionType; label: string }[] = [
 
 const STATUS_OPTIONS = [
   { value: 'AVAILABLE', label: '진행중' },
-  { value: 'RESERVED', label: '가계약' },
   { value: 'COMPLETED', label: '완료' },
 ]
+
+const DIRECTIONS: { value: Direction; label: string }[] = [
+  { value: '남향', label: '남향' },
+  { value: '남동향', label: '남동향' },
+  { value: '동향', label: '동향' },
+  { value: '남서향', label: '남서향' },
+  { value: '서향', label: '서향' },
+  { value: '북향', label: '북향' },
+  { value: '북동향', label: '북동향' },
+  { value: '북서향', label: '북서향' },
+]
+
+const MOVE_IN_TYPES: { value: MoveInType; label: string }[] = [
+  { value: '즉시입주', label: '즉시입주' },
+  { value: '날짜협의', label: '날짜협의' },
+  { value: '날짜지정', label: '날짜지정' },
+]
+
+// 2-상태 토글: true / false
+function BoolToggle({
+  label,
+  value,
+  trueLabel = '있음',
+  falseLabel = '없음',
+  onChange,
+}: {
+  label: string
+  value: boolean
+  trueLabel?: string
+  falseLabel?: string
+  onChange: (v: boolean) => void
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-sm font-medium text-slate-700">{label}</span>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => onChange(true)}
+          className={`flex-1 h-10 rounded-xl text-sm font-medium border transition-colors ${
+            value === true
+              ? 'bg-blue-600 border-blue-600 text-white'
+              : 'bg-white border-slate-300 text-slate-500'
+          }`}
+        >
+          {trueLabel}
+        </button>
+        <button
+          type="button"
+          onClick={() => onChange(false)}
+          className={`flex-1 h-10 rounded-xl text-sm font-medium border transition-colors ${
+            value === false
+              ? 'bg-slate-600 border-slate-600 text-white'
+              : 'bg-white border-slate-300 text-slate-500'
+          }`}
+        >
+          {falseLabel}
+        </button>
+      </div>
+    </div>
+  )
+}
 
 interface ExistingImage {
   id: string
@@ -59,6 +120,11 @@ interface Props {
     total_floors: number | null
     status: string
     memo: string | null
+    has_elevator: boolean | null
+    has_parking: boolean | null
+    direction: string | null
+    move_in_type: string | null
+    move_in_date: string | null
   }
   images: ExistingImage[]
 }
@@ -91,9 +157,14 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
     total_floors: property.total_floors?.toString() ?? '',
     status: property.status,
     memo: property.memo ?? '',
+    has_elevator: property.has_elevator ?? true,
+    has_parking: property.has_parking ?? true,
+    direction: (property.direction ?? '') as Direction | '',
+    move_in_type: (property.move_in_type ?? '') as MoveInType | '',
+    move_in_date: property.move_in_date ?? '',
   })
 
-  function update(field: string, value: string | number) {
+  function update(field: string, value: string | number | boolean | null) {
     setForm((prev) => ({ ...prev, [field]: value }))
   }
 
@@ -126,19 +197,11 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
         const res = await fetch('/api/upload', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            filename: img.file.name,
-            contentType: img.file.type,
-            propertyId: property.id,
-          }),
+          body: JSON.stringify({ filename: img.file.name, contentType: img.file.type, propertyId: property.id }),
         })
         if (!res.ok) continue
         const { presignedUrl, publicUrl } = await res.json()
-        const uploadRes = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: img.file,
-          headers: { 'Content-Type': img.file.type },
-        })
+        const uploadRes = await fetch(presignedUrl, { method: 'PUT', body: img.file, headers: { 'Content-Type': img.file.type } })
         if (uploadRes.ok) urls.push(publicUrl)
       } catch {
         console.warn('이미지 업로드 실패, 건너뜀')
@@ -170,6 +233,11 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
         total_floors: form.total_floors ? parseInt(form.total_floors) : null,
         status: form.status,
         memo: form.memo || null,
+        has_elevator: form.has_elevator,
+        has_parking: form.has_parking,
+        direction: form.direction || null,
+        move_in_type: form.move_in_type || null,
+        move_in_date: form.move_in_type === '날짜지정' && form.move_in_date ? form.move_in_date : null,
       })
       .eq('id', property.id)
 
@@ -179,12 +247,10 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
       return
     }
 
-    // 삭제된 이미지 DB에서 제거
     if (deletedImageIds.length > 0) {
       await supabase.from('property_images').delete().in('id', deletedImageIds)
     }
 
-    // 새 이미지 업로드 및 저장
     if (newImages.length > 0) {
       const uploadedUrls = await uploadNewImages()
       if (uploadedUrls.length > 0) {
@@ -199,14 +265,10 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
       }
     }
 
-    // 남은 이미지 중 썸네일이 없으면 첫 번째를 썸네일로
     const remainingImages = existingImages.filter((img) => !deletedImageIds.includes(img.id))
     const hasThumbnail = remainingImages.some((img) => img.is_thumbnail)
     if (!hasThumbnail && remainingImages.length > 0) {
-      await supabase
-        .from('property_images')
-        .update({ is_thumbnail: true })
-        .eq('id', remainingImages[0].id)
+      await supabase.from('property_images').update({ is_thumbnail: true }).eq('id', remainingImages[0].id)
     }
 
     window.location.href = `/properties/${property.id}`
@@ -229,11 +291,7 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
           <ChevronLeft size={24} className="text-slate-700" />
         </button>
         <h1 className="flex-1 text-lg font-bold text-slate-900">매물 수정</h1>
-        <button
-          onClick={handleDelete}
-          disabled={deleting}
-          className="p-2 text-red-500 disabled:opacity-40"
-        >
+        <button onClick={handleDelete} disabled={deleting} className="p-2 text-red-500 disabled:opacity-40">
           <Trash2 size={20} />
         </button>
       </div>
@@ -254,21 +312,11 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
                 <span className="text-xs mt-1">{totalImageCount}/10</span>
               </button>
             )}
-
-            {/* 기존 이미지 */}
             {existingImages.map((img, i) => (
               <div key={img.id} className="relative shrink-0 w-20 h-20">
-                <Image
-                  src={img.image_url}
-                  alt={`사진 ${i + 1}`}
-                  fill
-                  className="object-cover rounded-xl"
-                  sizes="80px"
-                />
+                <Image src={img.image_url} alt={`사진 ${i + 1}`} fill className="object-cover rounded-xl" sizes="80px" />
                 {img.is_thumbnail && (
-                  <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center rounded-b-xl py-0.5">
-                    대표
-                  </span>
+                  <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center rounded-b-xl py-0.5">대표</span>
                 )}
                 <button
                   type="button"
@@ -279,21 +327,11 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
                 </button>
               </div>
             ))}
-
-            {/* 새로 추가된 이미지 */}
             {newImages.map((img, i) => (
               <div key={i} className="relative shrink-0 w-20 h-20">
-                <Image
-                  src={img.preview}
-                  alt={`새 사진 ${i + 1}`}
-                  fill
-                  className="object-cover rounded-xl"
-                  sizes="80px"
-                />
+                <Image src={img.preview} alt={`새 사진 ${i + 1}`} fill className="object-cover rounded-xl" sizes="80px" />
                 {existingImages.length === 0 && i === 0 && (
-                  <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center rounded-b-xl py-0.5">
-                    대표
-                  </span>
+                  <span className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-[10px] text-center rounded-b-xl py-0.5">대표</span>
                 )}
                 <button
                   type="button"
@@ -305,14 +343,7 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
               </div>
             ))}
           </div>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            onChange={handleImageSelect}
-          />
+          <input ref={fileInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleImageSelect} />
         </section>
 
         {/* 기본 정보 */}
@@ -326,28 +357,10 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
             required
           />
           <div className="grid grid-cols-2 gap-3">
-            <Select
-              id="type"
-              label="매물 유형"
-              options={PROPERTY_TYPES}
-              value={form.type}
-              onChange={(e) => update('type', e.target.value)}
-            />
-            <Select
-              id="transaction_type"
-              label="거래 유형"
-              options={TRANSACTION_TYPES}
-              value={form.transaction_type}
-              onChange={(e) => update('transaction_type', e.target.value)}
-            />
+            <Select id="type" label="매물 유형" options={PROPERTY_TYPES} value={form.type} onChange={(e) => update('type', e.target.value)} />
+            <Select id="transaction_type" label="거래 유형" options={TRANSACTION_TYPES} value={form.transaction_type} onChange={(e) => update('transaction_type', e.target.value)} />
           </div>
-          <Select
-            id="status"
-            label="매물 상태"
-            options={STATUS_OPTIONS}
-            value={form.status}
-            onChange={(e) => update('status', e.target.value)}
-          />
+          <Select id="status" label="매물 상태" options={STATUS_OPTIONS} value={form.status} onChange={(e) => update('status', e.target.value)} />
         </section>
 
         {/* 가격 정보 */}
@@ -384,45 +397,13 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
         {/* 위치 및 구조 */}
         <section className="flex flex-col gap-4">
           <p className="text-sm font-semibold text-slate-800 -mb-1">위치 및 구조</p>
-          <Input
-            id="address"
-            label="주소 *"
-            value={form.address}
-            onChange={(e) => update('address', e.target.value)}
-            required
-          />
-          <Input
-            id="detail_address"
-            label="동/호수 (내부용)"
-            value={form.detail_address}
-            onChange={(e) => update('detail_address', e.target.value)}
-          />
+          <Input id="address" label="주소 *" value={form.address} onChange={(e) => update('address', e.target.value)} required />
+          <Input id="detail_address" label="동/호수 (내부용)" value={form.detail_address} onChange={(e) => update('detail_address', e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              id="exclusive_area"
-              label="전용면적 (㎡)"
-              type="number"
-              value={form.exclusive_area}
-              onChange={(e) => update('exclusive_area', e.target.value)}
-              suffix="㎡"
-            />
+            <Input id="exclusive_area" label="전용면적 (㎡)" type="number" value={form.exclusive_area} onChange={(e) => update('exclusive_area', e.target.value)} suffix="㎡" />
             <div className="flex gap-2">
-              <Input
-                id="floor"
-                label="층"
-                type="number"
-                value={form.floor}
-                onChange={(e) => update('floor', e.target.value)}
-                suffix="층"
-              />
-              <Input
-                id="total_floors"
-                label="전체"
-                type="number"
-                value={form.total_floors}
-                onChange={(e) => update('total_floors', e.target.value)}
-                suffix="층"
-              />
+              <Input id="floor" label="층" type="number" value={form.floor} onChange={(e) => update('floor', e.target.value)} suffix="층" />
+              <Input id="total_floors" label="전체" type="number" value={form.total_floors} onChange={(e) => update('total_floors', e.target.value)} suffix="층" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -447,18 +428,78 @@ export function EditPropertyForm({ property, images: initialImages }: Props) {
           </div>
         </section>
 
+        {/* 추가 정보 */}
+        <section className="flex flex-col gap-4">
+          <p className="text-sm font-semibold text-slate-800 -mb-1">추가 정보</p>
+
+          <BoolToggle
+            label="엘리베이터"
+            value={form.has_elevator as boolean}
+            trueLabel="있음"
+            falseLabel="없음"
+            onChange={(v) => update('has_elevator', v)}
+          />
+          <BoolToggle
+            label="주차"
+            value={form.has_parking as boolean}
+            trueLabel="가능"
+            falseLabel="불가"
+            onChange={(v) => update('has_parking', v)}
+          />
+
+          <div className="grid grid-cols-2 gap-3">
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="direction" className="text-sm font-medium text-slate-700">방향</label>
+              <select
+                id="direction"
+                value={form.direction}
+                onChange={(e) => update('direction', e.target.value)}
+                className="h-11 rounded-xl border border-slate-300 bg-white text-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">미선택</option>
+                {DIRECTIONS.map((d) => (
+                  <option key={d.value} value={d.value}>{d.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label htmlFor="move_in_type" className="text-sm font-medium text-slate-700">입주 가능일</label>
+              <select
+                id="move_in_type"
+                value={form.move_in_type}
+                onChange={(e) => update('move_in_type', e.target.value)}
+                className="h-11 rounded-xl border border-slate-300 bg-white text-slate-900 px-3 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="">미선택</option>
+                {MOVE_IN_TYPES.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {form.move_in_type === '날짜지정' && (
+            <Input
+              id="move_in_date"
+              label="입주 날짜"
+              type="date"
+              value={form.move_in_date}
+              onChange={(e) => update('move_in_date', e.target.value)}
+            />
+          )}
+        </section>
+
         {/* 내부 메모 */}
         <section>
-          <label htmlFor="memo" className="text-sm font-medium text-slate-700 block mb-1">
-            내부 메모 (비공개)
-          </label>
+          <label htmlFor="memo" className="text-sm font-medium text-slate-700 block mb-1">비고 / 추가사항</label>
           <textarea
             id="memo"
             value={form.memo}
             onChange={(e) => update('memo', e.target.value)}
             rows={3}
-            placeholder="집주인 성향, 특이사항, 비밀번호 등"
-            className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-2.5 text-sm placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+            placeholder="특이사항, 추가 메모 등"
+            className="w-full rounded-xl border border-slate-300 bg-white text-slate-900 px-3 py-2.5 text-sm placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
           />
         </section>
 

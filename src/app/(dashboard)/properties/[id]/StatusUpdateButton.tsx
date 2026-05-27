@@ -9,7 +9,7 @@ import { formatStatus, getStatusColor } from '@/lib/utils'
 import { ChevronDown } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-const statusOptions: PropertyStatus[] = ['AVAILABLE', 'RESERVED', 'COMPLETED']
+const statusOptions: PropertyStatus[] = ['AVAILABLE', 'COMPLETED']
 
 interface Props {
   propertyId: string
