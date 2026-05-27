@@ -1,5 +1,7 @@
 // 관리자 - 사용자(사무소) 목록
 import { createAdminClient } from '@/lib/supabase/admin'
+
+export const dynamic = 'force-dynamic'
 import { Users, Building2, ChevronRight } from 'lucide-react'
 import Link from 'next/link'
 

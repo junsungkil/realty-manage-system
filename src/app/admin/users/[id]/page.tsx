@@ -1,5 +1,7 @@
 // 관리자 - 사용자 상세 (사무소별 매물 목록)
 import { createAdminClient } from '@/lib/supabase/admin'
+
+export const dynamic = 'force-dynamic'
 import { notFound } from 'next/navigation'
 import { ChevronLeft, Mail, Hash, CalendarDays, Building2, TrendingUp, CheckCircle2, Share2 } from 'lucide-react'
 import Link from 'next/link'

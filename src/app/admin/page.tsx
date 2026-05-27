@@ -3,43 +3,48 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Users, Building2, Share2, TrendingUp, CheckCircle2 } from 'lucide-react'
 import Link from 'next/link'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboardPage() {
   const admin = createAdminClient()
 
   const [
-    { count: totalUsers },
-    { count: totalProperties },
-    { count: availableProperties },
-    { count: completedProperties },
-    { count: totalShares },
-    { data: recentUsers },
-    { data: topOffices },
+    { data: allProperties },
+    { data: allOffices },
+    { data: allShares },
   ] = await Promise.all([
-    admin.from('offices').select('*', { count: 'exact', head: true }),
-    admin.from('properties').select('*', { count: 'exact', head: true }),
-    admin.from('properties').select('*', { count: 'exact', head: true }).eq('status', 'AVAILABLE'),
-    admin.from('properties').select('*', { count: 'exact', head: true }).eq('status', 'COMPLETED'),
-    admin.from('property_shares').select('*', { count: 'exact', head: true }),
-    admin.from('offices')
-      .select('office_name, brn, created_at, owner_id')
-      .order('created_at', { ascending: false })
-      .limit(5),
-    admin.from('offices')
-      .select('id, office_name, properties(count)'),
+    admin.from('properties').select('id, status, office_id'),
+    admin.from('offices').select('id, office_name, brn, created_at, owner_id'),
+    admin.from('property_shares').select('id'),
   ])
 
-  const sortedOffices = (topOffices ?? []).sort((a, b) => {
-    const aCount = (a.properties as any)?.[0]?.count ?? 0
-    const bCount = (b.properties as any)?.[0]?.count ?? 0
-    return bCount - aCount
-  })
+  const properties = allProperties ?? []
+  const offices = allOffices ?? []
+
+  // 통계 직접 계산
+  const totalProperties = properties.length
+  const availableProperties = properties.filter((p) => p.status === 'AVAILABLE').length
+  const completedProperties = properties.filter((p) => p.status === 'COMPLETED').length
+  const totalShares = allShares?.length ?? 0
+  const totalUsers = offices.length
+
+  // 사무소별 매물 수 계산 후 내림차순 정렬
+  const officePropertyCount = offices.map((o) => ({
+    ...o,
+    count: properties.filter((p) => p.office_id === o.id).length,
+  })).sort((a, b) => b.count - a.count)
+
+  // 최근 가입 사무소 (최신순 5개)
+  const recentUsers = [...offices]
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+    .slice(0, 5)
 
   const stats = [
-    { label: '가입 사무소', value: totalUsers ?? 0, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', href: '/admin/users' },
-    { label: '전체 매물', value: totalProperties ?? 0, icon: Building2, color: 'text-slate-600', bg: 'bg-slate-50', href: '/admin/properties' },
-    { label: '진행중 매물', value: availableProperties ?? 0, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', href: '/admin/properties?status=AVAILABLE' },
-    { label: '완료 매물', value: completedProperties ?? 0, icon: CheckCircle2, color: 'text-purple-600', bg: 'bg-purple-50', href: '/admin/properties?status=COMPLETED' },
-    { label: '공유 링크', value: totalShares ?? 0, icon: Share2, color: 'text-orange-600', bg: 'bg-orange-50', href: '/admin/properties' },
+    { label: '가입 사무소', value: totalUsers, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50', href: '/admin/users' },
+    { label: '전체 매물', value: totalProperties, icon: Building2, color: 'text-slate-600', bg: 'bg-slate-50', href: '/admin/properties' },
+    { label: '진행중 매물', value: availableProperties, icon: TrendingUp, color: 'text-green-600', bg: 'bg-green-50', href: '/admin/properties?status=AVAILABLE' },
+    { label: '완료 매물', value: completedProperties, icon: CheckCircle2, color: 'text-purple-600', bg: 'bg-purple-50', href: '/admin/properties?status=COMPLETED' },
+    { label: '공유 링크', value: totalShares, icon: Share2, color: 'text-orange-600', bg: 'bg-orange-50', href: '/admin/properties' },
   ]
 
   return (
@@ -72,8 +77,8 @@ export default async function AdminDashboardPage() {
             <Link href="/admin/users" className="text-xs text-blue-600">전체 보기</Link>
           </div>
           <div className="flex flex-col divide-y divide-slate-50">
-            {recentUsers && recentUsers.length > 0 ? recentUsers.map((u) => (
-              <div key={u.owner_id} className="py-2.5 flex items-center justify-between">
+            {recentUsers.length > 0 ? recentUsers.map((u) => (
+              <div key={u.id} className="py-2.5 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-slate-800">{u.office_name}</p>
                   <p className="text-xs text-slate-400">{u.brn ?? '사업자번호 없음'}</p>
@@ -88,24 +93,21 @@ export default async function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* 매물 등록 현황 (사무소별) */}
+        {/* 사무소별 매물 수 */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-bold text-slate-800">사무소별 매물 수</h2>
             <Link href="/admin/properties" className="text-xs text-blue-600">전체 보기</Link>
           </div>
           <div className="flex flex-col divide-y divide-slate-50">
-            {sortedOffices.length > 0 ? sortedOffices.map((o) => {
-              const count = (o.properties as any)?.[0]?.count ?? 0
-              return (
-                <div key={o.id} className="py-2.5 flex items-center justify-between">
-                  <p className="text-sm font-medium text-slate-800">{o.office_name}</p>
-                  <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
-                    {count}건
-                  </span>
-                </div>
-              )
-            }) : (
+            {officePropertyCount.length > 0 ? officePropertyCount.map((o) => (
+              <div key={o.id} className="py-2.5 flex items-center justify-between">
+                <p className="text-sm font-medium text-slate-800">{o.office_name}</p>
+                <span className="text-xs font-semibold px-2 py-0.5 bg-blue-50 text-blue-600 rounded-full">
+                  {o.count}건
+                </span>
+              </div>
+            )) : (
               <p className="text-sm text-slate-400 py-4 text-center">데이터가 없습니다</p>
             )}
           </div>

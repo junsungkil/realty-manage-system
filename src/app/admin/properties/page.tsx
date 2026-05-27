@@ -1,5 +1,7 @@
 // 관리자 - 전체 매물 목록
 import { createAdminClient } from '@/lib/supabase/admin'
+
+export const dynamic = 'force-dynamic'
 import { Building2 } from 'lucide-react'
 import { formatDealPrice } from '@/lib/utils'
 
