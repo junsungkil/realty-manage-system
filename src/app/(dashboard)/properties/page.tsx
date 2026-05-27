@@ -57,24 +57,41 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
     )
   }
 
+  // 검색어가 있을 때: RPC로 태그 부분검색 포함 ID 목록 먼저 조회
+  let matchedIds: string[] | null = null
+  if (searchParams.q) {
+    const { data: rpcRows } = await supabase.rpc('search_properties', {
+      p_office_id: office.id,
+      p_keyword: searchParams.q,
+    })
+    matchedIds = (rpcRows ?? []).map((r: { id: string }) => r.id)
+    // 검색 결과 없으면 빈 목록 반환
+    if (matchedIds.length === 0) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+          <PlusCircle size={40} className="mb-3 opacity-40" />
+          <p className="text-sm font-medium">조건에 맞는 매물이 없습니다.</p>
+          <Link href="/properties/create" className="mt-4 text-sm text-blue-600 font-medium">
+            매물 등록하기
+          </Link>
+        </div>
+      )
+    }
+  }
+
   let query = supabase
     .from('properties')
     .select('*, property_images(*)')
     .eq('office_id', office.id)
     .order('created_at', { ascending: false })
 
+  // 검색어 결과 ID로 필터 (태그 부분검색 포함)
+  if (matchedIds) query = query.in('id', matchedIds)
+
   // 기본 필터
   if (searchParams.transaction) query = query.eq('transaction_type', searchParams.transaction)
   if (searchParams.type) query = query.eq('type', searchParams.type)
   if (searchParams.status) query = query.eq('status', searchParams.status)
-
-  // 검색어: 주소 + 별칭 + 동호수 + 메모 + 태그
-  if (searchParams.q) {
-    const q = searchParams.q
-    query = query.or(
-      `address.ilike.%${q}%,title.ilike.%${q}%,detail_address.ilike.%${q}%,memo.ilike.%${q}%,tags.cs.{${q}}`
-    )
-  }
 
   // 고급 필터
   if (searchParams.area_min) query = query.gte('exclusive_area', Number(searchParams.area_min))
@@ -90,7 +107,7 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
     query = query.eq('has_parking', searchParams.has_parking === 'true')
   }
   if (searchParams.direction) query = query.eq('direction', searchParams.direction)
-  // 태그 필터 (상세필터에서 특정 태그 선택 시)
+  // 태그 필터 (카드 클릭 시 정확히 일치)
   if (searchParams.tag) query = query.contains('tags', [searchParams.tag])
 
   const { data: properties } = await query
