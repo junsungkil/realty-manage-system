@@ -27,6 +27,16 @@ interface SearchParams {
   tag?: string
 }
 
+const EmptyState = () => (
+  <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+    <PlusCircle size={40} className="mb-3 opacity-40" />
+    <p className="text-sm font-medium">조건에 맞는 매물이 없습니다.</p>
+    <Link href="/properties/create" className="mt-4 text-sm text-blue-600 font-medium">
+      매물 등록하기
+    </Link>
+  </div>
+)
+
 async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
   const supabase = createAdminClient()
 
@@ -64,19 +74,9 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
       p_office_id: office.id,
       p_keyword: searchParams.q,
     })
-    matchedIds = (rpcRows ?? []).map((r: { id: string }) => r.id)
-    // 검색 결과 없으면 빈 목록 반환
-    if (matchedIds.length === 0) {
-      return (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-          <PlusCircle size={40} className="mb-3 opacity-40" />
-          <p className="text-sm font-medium">조건에 맞는 매물이 없습니다.</p>
-          <Link href="/properties/create" className="mt-4 text-sm text-blue-600 font-medium">
-            매물 등록하기
-          </Link>
-        </div>
-      )
-    }
+    const ids: string[] = (rpcRows ?? []).map((r: { id: string }) => r.id)
+    matchedIds = ids
+    if (ids.length === 0) return <EmptyState />
   }
 
   let query = supabase
@@ -112,17 +112,7 @@ async function PropertyList({ searchParams }: { searchParams: SearchParams }) {
 
   const { data: properties } = await query
 
-  if (!properties || properties.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-        <PlusCircle size={40} className="mb-3 opacity-40" />
-        <p className="text-sm font-medium">조건에 맞는 매물이 없습니다.</p>
-        <Link href="/properties/create" className="mt-4 text-sm text-blue-600 font-medium">
-          매물 등록하기
-        </Link>
-      </div>
-    )
-  }
+  if (!properties || properties.length === 0) return <EmptyState />
 
   return (
     <div className="flex flex-col gap-3 p-4">
