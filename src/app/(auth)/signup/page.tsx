@@ -213,7 +213,7 @@ export default function SignupPage() {
     setLoading(true)
     const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
     if (signUpError) {
-      showToast(signUpError.message.includes('already registered') ? '이미 가입된 이메일입니다.' : '회원가입에 실패했습니다.')
+      showToast(signUpError.message)
       setLoading(false); return
     }
     if (!data.user) { showToast('이메일 인증이 필요합니다.', 'info'); setLoading(false); return }
@@ -223,7 +223,7 @@ export default function SignupPage() {
       office_name: officeName.trim(),
       brn: brnDigits || null,
     })
-    if (officeError) { showToast('사무소 정보 저장에 실패했습니다.'); setLoading(false); return }
+    if (officeError) { showToast(officeError.message); setLoading(false); return }
     window.location.href = '/'
   }
 
